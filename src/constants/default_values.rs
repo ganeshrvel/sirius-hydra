@@ -10,7 +10,7 @@ pub struct DefaultValues<'a> {
 }
 
 impl DefaultValues<'static> {
-    pub const RESTART_BTN_PRESS_TIME_MS: i64 = 4000_i64;
+    pub const RESTART_BTN_PRESS_TIME_MS: i64 = 3000_i64;
     pub const FILE_LOGGING_LEVEL: log::LevelFilter = if AppEnv::IS_RELEASE {
         log::LevelFilter::Error
     } else {
