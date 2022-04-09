@@ -127,6 +127,6 @@ Help me keep my works FREE and open for all.
 - Buy Me A Coffee (UPI, PayPal, Credit/Debit Cards, Internet Banking): [buymeacoffee.com/ganeshrvel](https://buymeacoffee.com/ganeshrvel "https://buymeacoffee.com/ganeshrvel")
 
 ### License
-irius Hydra - Raspberry Pi IOT | Internet Radio [rust] is released under [MIT License](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "MIT License").
+sirius Hydra - Raspberry Pi IOT | Internet Radio [rust] is released under [MIT License](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "MIT License").
 
 Copyright © 2018-Present Ganesh Rathinavel
