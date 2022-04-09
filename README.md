@@ -1,7 +1,7 @@
 # Sirius Hydra - Raspberry Pi IOT | Internet Radio [rust]
 
 - Author: [Ganesh Rathinavel](https://www.linkedin.com/in/ganeshrvel "Ganesh Rathinavel")
-- License: [GPLv3](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "GPLv3")
+- License: [MIT](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "MIT")
 - Repo URL: [https://github.com/ganeshrvel/sirius-hydra](https://github.com/ganeshrvel/sirius-hydra/ "https://github.com/ganeshrvel/sirius-hydra")
 - Contacts: ganeshrvel@outlook.com
 
@@ -109,7 +109,7 @@ nano ~/.bashrc
 ```
 
 ### Warranty
-Read the [license](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "GPLv3 License") carefully. The license makes it clear that the project is offered "as-is", without warranty, and disclaiming liability for damages resulting from using this project.
+Read the [license](https://github.com/ganeshrvel/sirius-hydra/blob/master/LICENSE "MIT License") carefully. The license makes it clear that the project is offered "as-is", without warranty, and disclaiming liability for damages resulting from using this project.
 
 ### Contacts
 Please feel free to contact me at ganeshrvel@outlook.com or [LinkedIn](https://www.linkedin.com/in/ganeshrvel)
