@@ -1,0 +1,8 @@
+[hooks]
+#pre-commit = "cargo fmt -v -- --check && cargo clippy --all-targets -- -D warnings"
+#pre-push = ["cargo fmt -v -- --check", "cargo clippy --all-targets -- -D warnings"]
+#post-commit = "echo 'Git commit was successful'"
+#post-push = "echo 'Git push was successful'"
+
+[logging]
+verbose = true

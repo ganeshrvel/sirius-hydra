@@ -1,0 +1,3 @@
+warn-on-all-wildcard-imports = true
+upper-case-acronyms-aggressive = true
+max-struct-bools = 2
