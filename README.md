@@ -13,12 +13,19 @@ Ref: https://pixelspark.nl/2020/cross-compiling-rust-programs-for-a-raspberry-pi
 
 ```shell
 brew install arm-linux-gnueabihf-binutils sshpass
+
+# install rust if not installed:
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# open the project directory:
 rustup target add arm-unknown-linux-musleabi
 ```
 
 **SSH Config**
 - Rename `env.sample.config` to `env.config`
 - Edit values inside `env.config`
+- Rename `sample.config.yaml` to `config.yaml`
+- Edit values inside `config.yaml`
 
 **Installation**
 - Download the OS image burner: https://downloads.raspberrypi.org/imager/imager_latest.dmg
