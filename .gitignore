@@ -30,3 +30,4 @@ Rocket.toml
 app-settings.yaml
 iot-settings.yaml
 config.yaml
+.DS_Store
