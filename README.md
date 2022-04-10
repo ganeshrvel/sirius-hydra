@@ -39,7 +39,8 @@ rustup target add arm-unknown-linux-musleabi
 # Run
 sudo raspi-config
 ```
-- Choose Boot / Auto Login options > Command Line Auto Login
+- Choose System Options > Boot / Auto Login > Console Autologin
+- Choose Interface Options > Serial Port > `Login shell access over serial` -> Yes
 
 ```shell
 # Run
@@ -78,6 +79,15 @@ sudo apt upgrade
 sudo raspi-config
 ```
 - Choose System Options > Audio > USB 0
+
+- Increase the volume
+- 
+```shell
+# Run
+alsamixer
+
+# keep pressing the Navigation Up arrow on the keyboard to increase the volume
+```
 
 ```shell
 # Run

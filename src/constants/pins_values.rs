@@ -9,7 +9,8 @@ pub struct PinValues<'a> {
 }
 
 impl PinValues<'static> {
-    pub const SHUTDOWN_BTN: u8 = 21;
+    pub const SHUTDOWN_BTN: u8 = 3;
     pub const RADIO_RESTART_BTN: u8 = 20;
     pub const PROGRAM_POWER_LED: u8 = 26;
+    pub const OS_LOADED_LED: u8 = 14;
 }

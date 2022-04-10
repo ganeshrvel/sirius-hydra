@@ -28,7 +28,7 @@ use crate::constants::strings::Strings;
 use crate::helpers::logs::fern_log::setup_logging;
 use crate::helpers::parsers::setting_files::SettingFiles;
 use log::{debug, error, warn};
-use rppal::gpio::{Gpio, InputPin};
+use rppal::gpio::{Gpio, InputPin, OutputPin};
 use std::process::Command;
 use std::sync::Arc;
 use std::thread::sleep;
@@ -97,6 +97,24 @@ fn wait_for_pull_up_button_release(pin: &InputPin) {
     }
 }
 
+fn blink_led(pin: &mut OutputPin) {
+    let gpio_pin = pin;
+
+    for _ in 0..20 {
+        let is_high = gpio_pin.is_set_high();
+
+        if is_high {
+            gpio_pin.set_low();
+        } else {
+            gpio_pin.set_high();
+        }
+
+        sleep(Duration::from_millis(100));
+    }
+
+    gpio_pin.set_high();
+}
+
 fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
     let mut program_power_led = Gpio::new()?
         .get(PinValues::PROGRAM_POWER_LED)?
@@ -109,6 +127,10 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
     let shutdown_btn = Gpio::new()?
         .get(PinValues::SHUTDOWN_BTN)?
         .into_input_pullup();
+
+    let mut os_loaded_led = Gpio::new()?
+        .get(PinValues::OS_LOADED_LED)?
+        .into_output_high();
 
     program_power_led.set_high();
 
@@ -145,6 +167,9 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
     });
 
     thread::spawn(move || -> anyhow::Result<()> {
+        // set the `os loaded led` to high
+        os_loaded_led.set_high();
+
         loop {
             debug!("[shutdown button] watching for the button press...");
             wait_for_pull_up_button_press(&shutdown_btn);
@@ -158,6 +183,9 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
                 "[shutdown button] button released after `{}` milliseconds",
                 elapsed_shutdown_btn_pressed_time_ms
             );
+
+            // blink the `os loaded led` to show that the shutdown or reboot is in progress
+            blink_led(&mut os_loaded_led);
 
             if elapsed_shutdown_btn_pressed_time_ms >= DefaultValues::RESTART_BTN_PRESS_TIME_MS {
                 debug!(
