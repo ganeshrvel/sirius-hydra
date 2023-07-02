@@ -12,12 +12,13 @@
   const playButton = document.getElementById( 'play-button' );
 
   const urlParams = new URLSearchParams( window.location.search );
-  const radio_url = urlParams.get( 'radio_url' );
+  const radioUrl = urlParams.get( 'radio_url' );
+  const decodedRadioUrl = decodeURIComponent(radioUrl);
 
   const hls = new Hls();
   let isRetrying = false;
 
-  hls.loadSource(radio_url);
+  hls.loadSource(decodedRadioUrl);
   hls.attachMedia(audioElement);
   hls.on(Hls.Events.MANIFEST_PARSED, () => {
     playButton.disabled = false;
@@ -54,7 +55,7 @@
     setTimeout(() => {
       console.info('retrying...');
 
-      hls.loadSource(radio_url);
+      hls.loadSource(decodedRadioUrl);
       hls.startLoad();
       isRetrying = false;
     }, 2000);
