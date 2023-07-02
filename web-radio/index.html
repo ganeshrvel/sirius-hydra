@@ -30,8 +30,6 @@
       case Hls.ErrorTypes.NETWORK_ERROR:
         console.error('Network error occurred.', data);
         if (!isRetrying) {
-          console.info('retrying...');
-
           isRetrying = true;
           hlsTryLoad();
         }
@@ -41,8 +39,6 @@
         console.error('Media error occurred.', data);
 
         if (!isRetrying) {
-          console.info('retrying...');
-
           isRetrying = true;
           hlsTryLoad();
         }
@@ -56,6 +52,8 @@
 
   function hlsTryLoad() {
     setTimeout(() => {
+      console.info('retrying...');
+
       hls.loadSource(radio_url);
       hls.startLoad();
       isRetrying = false;
