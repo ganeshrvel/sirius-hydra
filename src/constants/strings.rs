@@ -11,6 +11,6 @@ pub struct Strings<'a> {
 
 impl Strings<'static> {
     pub const APP_NAME: &'static str = "Sirius Hydra";
-    pub const VLC_PROCESS_NAME: &'static str = "vlc";
-    pub const CVLC_PROCESS_NAME: &'static str = "vlc";
+    pub const CHROMIUM_PROCESS_NAME: &'static str = "chromium-browse";
+    pub const CHROMIUM_EXECUTABLE: &'static str = "chromium-browser";
 }

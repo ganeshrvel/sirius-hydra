@@ -60,6 +60,18 @@ fn is_process_running(p_name: &str) -> bool {
     false
 }
 
+fn print_all_running_processes() {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    for (pid, process) in sys.processes() {
+        println!("PID: {}", pid);
+        println!("Name: {}", process.name());
+        // Add more fields as needed, such as CPU usage, memory usage, etc.
+        println!("---------------------------------------");
+    }
+}
+
 fn kill_process(p_name: &str) {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -141,23 +153,42 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
         let settings_cloned = settings.clone();
 
         loop {
-            if !is_process_running(Strings::VLC_PROCESS_NAME) {
-                debug!("[radio] no instance of cvlc found");
+            if !is_process_running(Strings::CHROMIUM_PROCESS_NAME) {
+                debug!("[radio] no instance of chromium found");
 
-                debug!("[radio] creating new instance of cvlc...");
-                debug!("[radio] playing audio using the vlc instance...");
+                debug!("[radio] creating new instance of chromium...");
+                debug!("[radio] playing audio using the chromium instance...");
 
-                // command: cvlc https://site.com/playlist.m3u8 vlc://quit
-                let c = Command::new(Strings::CVLC_PROCESS_NAME)
-                    .arg(&settings_cloned.config.settings.radio_url)
-                    .arg("vlc://quit")
-                    .arg("--no-interact")
+                let radio_url = &settings_cloned.config.settings.radio_url;
+                let base_url = &settings_cloned.config.settings.radio_streaming_website_url;
+
+                let encoded_query_string = url::form_urlencoded::Serializer::new(String::new())
+                    .append_pair("radio_url", radio_url)
+                    .finish();
+
+                let url_with_encoded_query = format!("{}?{}", base_url, encoded_query_string);
+
+                // command:
+                // GOOGLE_API_KEY="xxxxxxxxxxxx" && GOOGLE_DEFAULT_CLIENT_ID="xxxxxxxxxxxx" && GOOGLE_DEFAULT_CLIENT_SECRET="xxxxxxxxxxxx" && chromium-browser --headless --disable-gpu --remote-debugging-port=9222 <https://website-name.com?radio_url=https://radio-url.com/playlist.m3u8> --new-window --start-maximized --incognito --disable-features=PreloadMediaEngagementData,AutoplayIgnoreWebAudio,MediaEngagementBypassAutoplayPolicies  --autoplay-policy=no-user-gesture-required
+                let c = Command::new(Strings::CHROMIUM_EXECUTABLE)
+                    .env("GOOGLE_API_KEY", &settings_cloned.config.settings.google_api_key)
+                    .env("GOOGLE_DEFAULT_CLIENT_ID", &settings_cloned.config.settings.google_default_client_id)
+                    .env("GOOGLE_DEFAULT_CLIENT_SECRET", &settings_cloned.config.settings.google_default_client_secret)
+                    .arg("--headless")
+                    .arg("--disable-gpu")
+                    .arg("--remote-debugging-port=9222")
+                    .arg(&url_with_encoded_query)
+                    .arg("--new-window")
+                    .arg("--start-maximized")
+                    .arg("--incognito")
+                    .arg("--disable-features=PreloadMediaEngagementData,AutoplayIgnoreWebAudio,MediaEngagementBypassAutoplayPolicies")
+                    .arg("--autoplay-policy=no-user-gesture-required")
                     .spawn();
 
                 match c {
                     Ok(_) => {}
                     Err(err) => {
-                        error!("[radio] [0001][cvlc] process error: {:?}", err);
+                        error!("[radio] [0001][chromium] process error: {:?}", err);
                     }
                 }
             }
@@ -231,7 +262,7 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
 
         debug!("[radio shutdown button] shutting down the program",);
 
-        kill_process(Strings::VLC_PROCESS_NAME);
+        kill_process(Strings::CHROMIUM_PROCESS_NAME);
 
         // kill the power led
         program_power_led.set_low();
