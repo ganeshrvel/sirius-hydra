@@ -1,0 +1,69 @@
+<html lang="en">
+
+<script src="./hls.js"></script>
+
+<body>
+<audio id="audio-player" controls></audio>
+<button id="play-button">Play</button>
+</body>
+
+<script>
+  const audioElement = document.getElementById( 'audio-player' );
+  const playButton = document.getElementById( 'play-button' );
+
+  const urlParams = new URLSearchParams( window.location.search );
+  const radioUrl = urlParams.get( 'radio_url' );
+  const decodedRadioUrl = decodeURIComponent(radioUrl);
+
+  const hls = new Hls();
+  let isRetrying = false;
+
+  hls.loadSource(decodedRadioUrl);
+  hls.attachMedia(audioElement);
+  hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    playButton.disabled = false;
+    audioElement.play();
+  });
+
+  // Listen to the onerror event
+  hls.on(Hls.Events.ERROR, function(event, data) {
+    switch (data.type) {
+      case Hls.ErrorTypes.NETWORK_ERROR:
+        console.error('Network error occurred.', data);
+        if (!isRetrying) {
+          isRetrying = true;
+          hlsTryLoad();
+        }
+
+        break;
+      case Hls.ErrorTypes.MEDIA_ERROR:
+        console.error('Media error occurred.', data);
+
+        if (!isRetrying) {
+          isRetrying = true;
+          hlsTryLoad();
+        }
+        break;
+      default:
+        // Handle other errors
+        console.error('An error occurred.', data);
+        break;
+    }
+  });
+
+  function hlsTryLoad() {
+    setTimeout(() => {
+      console.info('retrying...');
+
+      hls.loadSource(decodedRadioUrl);
+      hls.startLoad();
+      isRetrying = false;
+    }, 2000);
+  }
+
+  playButton.addEventListener( 'click', () => {
+    audioElement.play();
+  } );
+</script>
+
+</html>
