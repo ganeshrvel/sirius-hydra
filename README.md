@@ -100,7 +100,7 @@ sudo raspi-config
 - Choose System Options > Audio > USB 0
 
 - Increase the volume
-- 
+
 ```shell
 # Run
 alsamixer
