@@ -5,6 +5,25 @@
 - Repo URL: [https://github.com/ganeshrvel/sirius-hydra](https://github.com/ganeshrvel/sirius-hydra/ "https://github.com/ganeshrvel/sirius-hydra")
 - Contacts: ganeshrvel@outlook.com
 
+### Prerequisites
+
+The app uses Chromium to play the web radio due to better HLS support. However, Chromium requires the following keys to function properly: `GOOGLE_API_KEY`, `GOOGLE_DEFAULT_CLIENT_ID`, and `GOOGLE_DEFAULT_CLIENT_SECRET`.
+
+To generate these keys, please visit https://www.chromium.org/developers/how-tos/api-keys/ and follow the provided instructions. Once you have generated the keys, make sure to update the corresponding values inside the config.yaml file.
+
+
+**Web Radio hosting**
+
+To enable web radio playback, the files within the ./web-radio directory need to be deployed. You can choose to deploy these files to services such as Cloudflare Pages, GitHub Pages, Vercel, or similar platforms. Remember to update the URL of the web radio website inside the config.yaml file accordingly.
+
+**SSH Config**
+
+- Rename `env.sample.config` to `env.config`
+- Edit values inside `env.config`
+- Rename `config.sample.yaml` to `config.yaml`
+- Edit values inside `config.yaml`
+
+
 ### Setup
 
 **macOS setup**
@@ -28,26 +47,12 @@ rustup target add arm-unknown-linux-musleabi
     - Choose 32 bits or 64 bits as required https://www.raspberrypi.com/software/operating-systems/
 - In the Rpi Imager app choose settings gear icon and set the ssh keys and wifi password
 - After burning the OS using the imager app, plug in the sdcard into the rpi
-- Wait for the bootup
+- Wait for the Rasbian OS bootup
+- ssh into Raspberry pi
 
-
-**Prerequisites**
-
-The app uses Chromium to play the web radio due to better HLS support. However, Chromium requires the following keys to function properly: `GOOGLE_API_KEY`, `GOOGLE_DEFAULT_CLIENT_ID`, and `GOOGLE_DEFAULT_CLIENT_SECRET`.
-
-To generate these keys, please visit https://www.chromium.org/developers/how-tos/api-keys/ and follow the provided instructions. Once you have generated the keys, make sure to update the corresponding values inside the config.yaml file.
-
-
-**Web Radio hosting**
-
-To enable web radio playback, the files within the ./web-radio directory need to be deployed. You can choose to deploy these files to services such as Cloudflare Pages, GitHub Pages, Vercel, or similar platforms. Remember to update the URL of the web radio website inside the config.yaml file accordingly.
-
-**SSH Config**
-
-- Rename `env.sample.config` to `env.config`
-- Edit values inside `env.config`
-- Rename `config.sample.yaml` to `config.yaml`
-- Edit values inside `config.yaml`
+```shell
+ssh pi@host
+```
 
 ```shell
 # Run
