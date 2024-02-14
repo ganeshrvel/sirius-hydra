@@ -9,16 +9,3 @@ settings:
     # [string] Radio url
     radio_url: "https://example.com/playlist.m3u8"
 
-    # [string] URL of the website where the radio stream will be hosted.
-    # This is usually the URL to the deployed "./web-radio" script.
-    radio_streaming_website_url: "https://mydomain.com/web-radio"
-
-    # [string] API key used by Chromium. To generate the value, refer to: https://www.chromium.org/developers/how-tos/api-keys/
-    google_api_key: ""
-
-    # [string] Default client ID used by Chromium. To generate the value, refer to: https://www.chromium.org/developers/how-tos/api-keys/
-    google_default_client_id: ""
-
-    # [string] Default client secret used by Chromium. To generate the value, refer to: https://www.chromium.org/developers/how-tos/api-keys/
-    google_default_client_secret: ""
-

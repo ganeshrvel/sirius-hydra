@@ -7,4 +7,4 @@ set -e
 
 . ./scripts/-base.sh
 
-sshpass -p "$SSH_PASSWORD" ssh -t "${TARGET_HOST}" "${REMOTE_SIRIUS_HYDRA_SOURCE_PATH}/scripts/-remote-build-run-release.sh"
+ssh -i "${SSH_PRIVATE_KEY}" -t "${TARGET_HOST}" "${REMOTE_SIRIUS_HYDRA_SOURCE_PATH}/scripts/-remote-build-run-release.sh"

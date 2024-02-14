@@ -11,6 +11,9 @@ pub struct Strings<'a> {
 
 impl Strings<'static> {
     pub const APP_NAME: &'static str = "Sirius Hydra";
-    pub const CHROMIUM_PROCESS_NAME: &'static str = "chromium-browse";
-    pub const CHROMIUM_EXECUTABLE: &'static str = "chromium-browser";
+    pub const FFMPEG_PROCESS_SHELL_COMMAND: &'static str = "sh -c ffmpeg";
+    pub const FFMPEG_PROCESS_NAME: &'static str = "ffmpeg";
+    pub const FFMPEG_EXECUTABLE: &'static str = "ffmpeg";
+    pub const FFPLAY_PROCESS_NAME: &'static str = "ffplay";
+    pub const FFPLAY_EXECUTABLE: &'static str = "ffplay";
 }

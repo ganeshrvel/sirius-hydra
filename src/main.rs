@@ -29,12 +29,12 @@ use crate::helpers::logs::fern_log::setup_logging;
 use crate::helpers::parsers::setting_files::SettingFiles;
 use log::{debug, error, warn};
 use rppal::gpio::{Gpio, InputPin, OutputPin};
-use std::process::Command;
+use std::process::{Command, Output};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
 use std::{process, thread};
-use sysinfo::{ProcessExt, Signal, System, SystemExt};
+use sysinfo::{PidExt, ProcessExt, Signal, System, SystemExt};
 
 fn main() -> anyhow::Result<()> {
     let settings = SettingFiles::new();
@@ -49,6 +49,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[ignore = "dead_code"]
 fn is_process_running(p_name: &str) -> bool {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -60,6 +61,99 @@ fn is_process_running(p_name: &str) -> bool {
     false
 }
 
+fn is_ffmpeg_running() -> anyhow::Result<bool> {
+    let processes: Vec<&str> = vec![
+        Strings::FFMPEG_PROCESS_SHELL_COMMAND,
+        Strings::FFMPEG_PROCESS_NAME,
+        Strings::FFPLAY_PROCESS_NAME,
+    ];
+
+    for p in processes {
+        if let Ok(result) = is_processes_running_find_by_command(p) {
+            if result {
+                return Ok(true);
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+fn find_pids_by_command(search_pattern: &str) -> anyhow::Result<Vec<u32>> {
+    let command_string = r#"ps axww -o pid,command | awk '{printf "%s;", $1; for(i=2;i<=NF;i++) printf "%s ", $i; print ""}'"#;
+
+    let ps_output: Output = Command::new("sh").arg("-c").arg(command_string).output()?;
+
+    // Check if the command was executed successfully
+    if !ps_output.status.success() {
+        let error = String::from_utf8_lossy(&ps_output.stderr).to_string();
+        return Err(anyhow::Error::msg(format!(
+            "[find_processes_by_command] Failed to run the ps command: {}",
+            error
+        )));
+    }
+
+    // Convert the output to a UTF-8 string
+    let ps_output_str = std::str::from_utf8(&ps_output.stdout)?;
+
+    // Iterate over lines, extract PID where the command matches the search pattern
+    let mut pids = Vec::new();
+    for line in ps_output_str.lines().skip(1) {
+        // Skip header row
+        if let Some((pid_str, command)) = line.split_once(';') {
+            if command.contains(search_pattern) {
+                match pid_str.parse::<u32>() {
+                    Ok(pid) => pids.push(pid),
+                    Err(_) => error!(
+                        "[find_processes_by_command] Failed to parse PID: {}",
+                        pid_str
+                    ),
+                }
+            }
+        }
+    }
+
+    Ok(pids)
+}
+
+fn is_processes_running_find_by_command(search_pattern: &str) -> anyhow::Result<bool> {
+    let matching_processes = find_pids_by_command(search_pattern)?;
+
+    return Ok(matching_processes.len() > 0);
+}
+
+fn kill_running_processes_by_command(search_pattern: &str) -> anyhow::Result<()> {
+    let mut sys = System::new_all();
+    let matching_processes = find_pids_by_command(search_pattern)?;
+
+    for pid in matching_processes {
+        let p = sys.process(sysinfo::Pid::from_u32(pid));
+        match p {
+            Some(pd) => {
+                pd.kill_with(Signal::Kill);
+            }
+            _ => {}
+        }
+    }
+
+    return Ok(());
+}
+
+fn kill_ffmpeg() -> anyhow::Result<()> {
+    let processes: Vec<&str> = vec![
+        Strings::FFMPEG_PROCESS_SHELL_COMMAND,
+        Strings::FFMPEG_PROCESS_NAME,
+        Strings::FFPLAY_PROCESS_NAME,
+    ];
+
+    for p in processes {
+        kill_running_processes_by_command(p)?
+    }
+
+    return Ok(());
+}
+
+#[ignore = "dead_code"]
 fn print_all_running_processes() {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -72,6 +166,7 @@ fn print_all_running_processes() {
     }
 }
 
+#[ignore = "dead_code"]
 fn kill_process(p_name: &str) {
     let mut sys = System::new_all();
     sys.refresh_all();
@@ -153,54 +248,31 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
         let settings_cloned = settings.clone();
 
         loop {
-            if !is_process_running(Strings::CHROMIUM_PROCESS_NAME) {
-                debug!("[radio] no instance of chromium found");
+            if !is_ffmpeg_running()? {
+                debug!("[radio] no instance of ffmpeg found");
 
-                debug!("[radio] creating new instance of chromium...");
-                debug!("[radio] playing audio using the chromium instance...");
+                debug!("[radio] creating new instance of ffmpeg...");
+                debug!("[radio] playing audio using the ffmpeg instance...");
 
                 let radio_url = &settings_cloned.config.settings.radio_url;
-                let base_url = &settings_cloned.config.settings.radio_streaming_website_url;
+                let command = format!(
+                    "{} -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i {} -acodec copy -f wav - | {} -",
+                    Strings::FFMPEG_EXECUTABLE, radio_url, Strings::FFPLAY_EXECUTABLE
+                );
 
-                let encoded_query_string = url::form_urlencoded::Serializer::new(String::new())
-                    .append_pair("radio_url", radio_url)
-                    .finish();
-
-                let url_with_encoded_query = format!("{}?{}", base_url, encoded_query_string);
-
-                // command:
-                // GOOGLE_API_KEY="xxxxxxxxxxxx" && GOOGLE_DEFAULT_CLIENT_ID="xxxxxxxxxxxx" && GOOGLE_DEFAULT_CLIENT_SECRET="xxxxxxxxxxxx" && chromium-browser --headless --disable-gpu --remote-debugging-port=9222 <https://website-name.com?radio_url=https://radio-url.com/playlist.m3u8> --new-window --start-maximized --incognito --disable-features=PreloadMediaEngagementData,AutoplayIgnoreWebAudio,MediaEngagementBypassAutoplayPolicies  --autoplay-policy=no-user-gesture-required
-                let c = Command::new(Strings::CHROMIUM_EXECUTABLE)
-                    .env("GOOGLE_API_KEY", &settings_cloned.config.settings.google_api_key)
-                    .env("GOOGLE_DEFAULT_CLIENT_ID", &settings_cloned.config.settings.google_default_client_id)
-                    .env("GOOGLE_DEFAULT_CLIENT_SECRET", &settings_cloned.config.settings.google_default_client_secret)
-                    .arg("--headless")
-                    .arg("--disable-dev-shm-usage")
-                    .arg("--disable-breakpad")
-                    .arg("--disable-sync")
-                    .arg("--disable-software-rasterizer")
-                    .arg("--disable-background-networking")
-                    .arg("--disable-extensions")
-                    .arg("--disable-translate")
-                    .arg("--disable-gpu")
-                    .arg("--remote-debugging-port=9222")
-                    .arg(&url_with_encoded_query)
-                    .arg("--new-window")
-                    .arg("--start-maximized")
-                    .arg("--incognito")
-                    .arg("--disable-features=PreloadMediaEngagementData,AutoplayIgnoreWebAudio,MediaEngagementBypassAutoplayPolicies")
-                    .arg("--autoplay-policy=no-user-gesture-required")
-                    .spawn();
+                // final command:
+                // sh -c 'ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i https://example.com/playlist.m3u8 -acodec copy -f wav - | ffplay -'
+                let c = Command::new("sh").arg("-c").arg(command).spawn();
 
                 match c {
                     Ok(_) => {}
                     Err(err) => {
-                        error!("[radio] [0001][chromium] process error: {:?}", err);
+                        error!("[radio] [0001][ffmpeg] process error: {:?}", err);
                     }
                 }
             }
 
-            thread::sleep(::std::time::Duration::from_millis(5000));
+            thread::sleep(::std::time::Duration::from_millis(20000));
         }
     });
 
@@ -269,7 +341,7 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
 
         debug!("[radio shutdown button] shutting down the program",);
 
-        kill_process(Strings::CHROMIUM_PROCESS_NAME);
+        kill_ffmpeg()?;
 
         // kill the power led
         program_power_led.set_low();

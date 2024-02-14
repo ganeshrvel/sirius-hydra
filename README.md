@@ -7,15 +7,6 @@
 
 ### Prerequisites
 
-The app uses Chromium to play the web radio due to better HLS support. However, Chromium requires the following keys to function properly: `GOOGLE_API_KEY`, `GOOGLE_DEFAULT_CLIENT_ID`, and `GOOGLE_DEFAULT_CLIENT_SECRET`.
-
-To generate these keys, please visit https://www.chromium.org/developers/how-tos/api-keys/ and follow the provided instructions. Once you have generated the keys, make sure to update the corresponding values inside the config.yaml file.
-
-
-**Web Radio hosting**
-
-To enable web radio playback, the files within the ./web-radio directory need to be deployed. You can choose to deploy these files to services such as Cloudflare Pages, GitHub Pages, Vercel, or similar platforms. Remember to update the URL of the web radio website inside the config.yaml file accordingly.
-
 **SSH Config**
 
 - Rename `env.sample.config` to `env.config`
@@ -31,7 +22,7 @@ To enable web radio playback, the files within the ./web-radio directory need to
 Ref: https://pixelspark.nl/2020/cross-compiling-rust-programs-for-a-raspberry-pi-from-macos
 
 ```shell
-brew install arm-linux-gnueabihf-binutils sshpass
+brew install arm-linux-gnueabihf-binutils
 
 # install rust if not installed:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -105,16 +96,25 @@ sudo raspi-config
 # Run
 alsamixer
 
+# select the output driver first (F6)
 # keep pressing the Navigation Up arrow on the keyboard to increase the volume
 ```
 
 ```shell
 # Run
-sudo apt-get install -y alsa-base pulseaudio pslist chromium-browser
+sudo apt-get install -y alsa-base pulseaudio pslist ffmpeg
 sudo reboot
 ```
 
 - Install the latest version of rust compiler
+
+**Setting up SSH Agent**
+```shell
+eval $(ssh-agent -s)
+ssh-add ~/.ssh/<private_key_id_rsa>
+
+# enter password when prompted
+```
 
 **Build**
 - Run `./scripts/build-run-dev.sh` to build the code on the local machine and execute the binary on the remote RPi
