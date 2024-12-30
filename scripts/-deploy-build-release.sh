@@ -9,7 +9,7 @@ cd ../
 
 ./scripts/-resets.sh
 
-killall -9 sirius-hydra || true
+pkill -9 sirius-hydra 2>/dev/null || true
 
 
 

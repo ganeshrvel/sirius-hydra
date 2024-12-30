@@ -28,8 +28,9 @@ use crate::constants::strings::Strings;
 use crate::helpers::logs::fern_log::setup_logging;
 use crate::helpers::parsers::setting_files::SettingFiles;
 use log::{debug, error, warn};
+use regex::Regex;
 use rppal::gpio::{Gpio, InputPin, OutputPin};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::Duration;
@@ -45,6 +46,51 @@ fn main() -> anyhow::Result<()> {
     log::debug!("Launching {}...", Strings::APP_NAME);
 
     run(settings_arc)?;
+
+    Ok(())
+}
+
+fn validate_url(url: &str) -> anyhow::Result<String> {
+    let url_regex = Regex::new(
+        r"^https?://[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)$",
+    )?;
+
+    if !url_regex.is_match(url) {
+        return Err(anyhow::Error::msg("Invalid URL format"));
+    }
+
+    // Escape quotes
+    Ok(url.replace("\"", "\\\""))
+}
+
+fn validate_command_string(command: &str) -> anyhow::Result<()> {
+    // Check for the most dangerous shell-related patterns
+    // that should never appear in a legitimate ffmpeg command
+    let suspicious_patterns = [
+        "sudo ", // Space after to avoid matching in URLs
+        "su ",   // Space after to avoid matching in URLs
+        "`",     // Backtick
+        "$(",    // Command substitution
+        "&&",    // Command chaining
+        "||",    // Command chaining
+        ";",     // Command separator
+        "|&",    // Pipe with stderr
+        ">/",    // Redirection to file
+        ">>/",   // Append to file
+        "<",     // Input redirection
+        "<<",    // Here document
+        "\n",    // Newlines
+        "\r",    // Carriage returns
+    ];
+
+    for pattern in suspicious_patterns {
+        if command.contains(pattern) {
+            return Err(anyhow::Error::msg(format!(
+                "Command contains forbidden pattern: {}",
+                pattern
+            )));
+        }
+    }
 
     Ok(())
 }
@@ -80,34 +126,38 @@ fn is_ffmpeg_running() -> anyhow::Result<bool> {
 }
 
 fn find_pids_by_command(search_pattern: &str) -> anyhow::Result<Vec<u32>> {
-    let command_string = r#"ps axww -o pid,command | awk '{printf "%s;", $1; for(i=2;i<=NF;i++) printf "%s ", $i; print ""}'"#;
+    // Create ps command with piped output
+    let ps_process = Command::new("ps")
+        .arg("axww")
+        .arg("-o")
+        .arg("pid,command")
+        .stdout(Stdio::piped())
+        .spawn()?;
 
-    let ps_output: Output = Command::new("sh").arg("-c").arg(command_string).output()?;
+    // Create awk command reading from ps_process stdout
+    let awk_output = Command::new("awk")
+        .arg(r#"{printf "%s;", $1; for(i=2;i<=NF;i++) printf "%s ", $i; print ""}"#)
+        .stdin(Stdio::from(ps_process.stdout.unwrap()))
+        .output()?;
 
-    // Check if the command was executed successfully
-    if !ps_output.status.success() {
-        let error = String::from_utf8_lossy(&ps_output.stderr).to_string();
+    if !awk_output.status.success() {
+        let error = String::from_utf8_lossy(&awk_output.stderr).to_string();
         return Err(anyhow::Error::msg(format!(
-            "[find_processes_by_command] Failed to run the ps command: {}",
+            "[find_processes_by_command] Command failed: {}",
             error
         )));
     }
 
-    // Convert the output to a UTF-8 string
-    let ps_output_str = std::str::from_utf8(&ps_output.stdout)?;
+    let output_str = std::str::from_utf8(&awk_output.stdout)?;
 
-    // Iterate over lines, extract PID where the command matches the search pattern
+    // Iterate over lines, extract PID where command matches search pattern
     let mut pids = Vec::new();
-    for line in ps_output_str.lines().skip(1) {
+    for line in output_str.lines().skip(1) {
         // Skip header row
         if let Some((pid_str, command)) = line.split_once(';') {
             if command.contains(search_pattern) {
-                match pid_str.parse::<u32>() {
-                    Ok(pid) => pids.push(pid),
-                    Err(_) => error!(
-                        "[find_processes_by_command] Failed to parse PID: {}",
-                        pid_str
-                    ),
+                if let Ok(pid) = pid_str.parse::<u32>() {
+                    pids.push(pid);
                 }
             }
         }
@@ -223,6 +273,7 @@ fn blink_led(pin: &mut OutputPin) {
 }
 
 fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
+    // BLUE LED
     let mut program_power_led = Gpio::new()?
         .get(PinValues::PROGRAM_POWER_LED)?
         .into_output_high();
@@ -235,6 +286,7 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
         .get(PinValues::SHUTDOWN_BTN)?
         .into_input_pullup();
 
+    // YELLOW LED
     let mut os_loaded_led = Gpio::new()?
         .get(PinValues::OS_LOADED_LED)?
         .into_output_high();
@@ -255,13 +307,17 @@ fn run(settings: Arc<SettingFiles>) -> anyhow::Result<()> {
                 debug!("[radio] playing audio using the ffmpeg instance...");
 
                 let radio_url = &settings_cloned.config.settings.radio_url;
+                let safe_url = validate_url(&radio_url)?;
+
                 let command = format!(
-                    "{} -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i {} -acodec copy -f wav - | {} -",
-                    Strings::FFMPEG_EXECUTABLE, radio_url, Strings::FFPLAY_EXECUTABLE
+                    "{} -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i \"{}\" -acodec copy -f wav - | {} -",
+                    Strings::FFMPEG_EXECUTABLE, safe_url, Strings::FFPLAY_EXECUTABLE
                 );
 
+                validate_command_string(&command)?;
+
                 // final command:
-                // sh -c 'ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i https://example.com/playlist.m3u8 -acodec copy -f wav - | ffplay -'
+                // sh -c 'ffmpeg -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "https://example.com/playlist.m3u8" -acodec copy -f wav - | ffplay -'
                 let c = Command::new("sh").arg("-c").arg(command).spawn();
 
                 match c {
